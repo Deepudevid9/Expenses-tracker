@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>NEXUS — AI Expense Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="cursor"></div>
+<div id="cursor-trail"></div>
+<canvas id="particles"></canvas>
+
+<!-- ======== AUTH OVERLAY ======== -->
+<div id="auth-overlay">
+  <div class="auth-box">
+    <div class="auth-logo">
+      <div class="auth-logo-box">◈</div>
+      <span class="auth-logo-name">E-TRACK</span>
+    </div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tab-login" onclick="switchTab('login')">Sign In</button>
+      <button class="auth-tab" id="tab-signup" onclick="switchTab('signup')">Sign Up</button>
+    </div>
+
+    <!-- LOGIN -->
+    <div id="login-form" class="auth-form">
+      <div class="auth-group">
+        <label class="auth-lbl">Email</label>
+        <input type="email" id="l-email" class="auth-inp" placeholder="you@email.com"/>
+      </div>
+      <div class="auth-group">
+        <label class="auth-lbl">Password</label>
+        <input type="password" id="l-pass" class="auth-inp" placeholder="••••••••"/>
+      </div>
+      <div class="auth-err" id="login-err">Invalid email or password</div>
+      <button class="btn-auth" onclick="handleLogin()">Sign In to E-TRACK</button>
+      <p style="text-align:center;font-size:.8rem;color:var(--muted)">Don't have an account? <button onclick="switchTab('signup')" style="background:none;border:none;color:var(--cyan);font-size:.8rem">Sign up free</button></p>
+    </div>
+
+    <!-- SIGNUP -->
+    <div id="signup-form" class="auth-form hidden">
+      <div class="auth-row">
+        <div class="auth-group">
+          <label class="auth-lbl">Full Name</label>
+          <input type="text" id="s-name" class="auth-inp" placeholder="Rahul Sharma"/>
+        </div>
+        <div class="auth-group">
+          <label class="auth-lbl">Email</label>
+          <input type="email" id="s-email" class="auth-inp" placeholder="you@email.com"/>
+        </div>
+      </div>
+      <div class="auth-group">
+        <label class="auth-lbl">Password</label>
+        <input type="password" id="s-pass" class="auth-inp" placeholder="Min 6 characters"/>
+      </div>
+      <div class="auth-row">
+        <div class="auth-group">
+          <label class="auth-lbl">Monthly Income (₹)</label>
+          <input type="number" id="s-income" class="auth-inp" placeholder="50000"/>
+        </div>
+        <div class="auth-group">
+          <label class="auth-lbl">Currency</label>
+          <select id="s-currency" class="auth-sel">
+            <option value="₹">₹ Indian Rupee</option>
+            <option value="$">$ US Dollar</option>
+            <option value="€">€ Euro</option>
+            <option value="£">£ British Pound</option>
+          </select>
+        </div>
+      </div>
+      <div class="auth-err" id="signup-err"></div>
+      <button class="btn-auth" onclick="handleSignup()">Create My Account</button>
+      <p style="text-align:center;font-size:.8rem;color:var(--muted)">Already have an account? <button onclick="switchTab('login')" style="background:none;border:none;color:var(--cyan);font-size:.8rem">Sign in</button></p>
+    </div>
+  </div>
+</div>
+
+<!-- ======== EDIT MODAL ======== -->
+<div class="modal-bg" id="edit-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div class="modal-title">Edit Expense</div>
+    <div class="modal-form">
+      <input type="hidden" id="edit-id"/>
+      <div class="auth-group"><label class="auth-lbl">Description</label><input type="text" id="edit-desc" class="auth-inp"/></div>
+      <div class="auth-row">
+        <div class="auth-group"><label class="auth-lbl">Amount</label><input type="number" id="edit-amt" class="auth-inp"/></div>
+        <div class="auth-group"><label class="auth-lbl">Date</label><input type="date" id="edit-date" class="auth-inp"/></div>
+      </div>
+      <div class="auth-group">
+        <label class="auth-lbl">Category</label>
+        <select id="edit-cat" class="auth-sel">
+          <option value="food">🍔 Food & Dining</option>
+          <option value="transport">🚗 Transport</option>
+          <option value="shopping">🛍️ Shopping</option>
+          <option value="utilities">⚡ Utilities</option>
+          <option value="entertainment">🎭 Entertainment</option>
+          <option value="health">💊 Health</option>
+          <option value="education">📚 Education</option>
+          <option value="other">📦 Other</option>
+        </select>
+      </div>
+      <button class="btn-auth" onclick="saveEdit()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======== NAVBAR ======== -->
+<nav class="nav" id="nav">
+  <div class="nav-inner">
+    <div class="logo">
+      <div class="logo-box"><span class="logo-hex">◈</span></div>
+      <span class="logo-name">E-TRACK</span>
+    </div>
+    <ul class="nav-links" id="nav-links">
+      <li><a href="#hero" class="nav-a active">Home</a></li>
+      <li><a href="#dashboard" class="nav-a">Dashboard</a></li>
+      <li><a href="#analytics" class="nav-a">Analytics</a></li>
+      <li><a href="#ai" class="nav-a">AI</a></li>
+      <li><a href="#add" class="nav-a">Add</a></li>
+    </ul>
+    <div class="nav-right">
+      <div class="nav-user">
+        <div class="nav-avatar" id="nav-avatar">U</div>
+        <span id="nav-username" style="display:none"></span>
+      </div>
+      <button class="nav-cta" onclick="goto('add')">+ Add Expense</button>
+      <button class="btn-logout" onclick="handleLogout()">Logout</button>
+      <button class="burger" id="burger"><span></span><span></span><span></span></button>
+    </div>
+  </div>
+</nav>
+
+<!-- ======== HERO ======== -->
+<section class="hero" id="hero">
+  <div class="hero-glow"></div>
+  <div class="orb orb1"></div><div class="orb orb2"></div><div class="orb orb3"></div>
+  <div class="hero-wrap">
+    <div class="hero-left">
+      <div class="hero-tag"><span class="tag-dot"></span>AI-Powered Financial Intelligence</div>
+      <h1 class="hero-h1">
+        <div class="line"><span>Track Every</span></div>
+        <div class="line"><span class="g">Rupee</span></div>
+        <div class="line"><span>Intelligently</span></div>
+      </h1>
+      <p class="hero-sub" id="hero-sub">E-TRACK uses real-time AI to categorize, predict, and optimize your spending — so you always know where your money goes.</p>
+      <div class="hero-btns">
+        <button class="btn-glow" onclick="goto('dashboard')">Explore Dashboard <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></button>
+        <button class="btn-outline" onclick="goto('add')">Add Expense</button>
+      </div>
+      <div class="hero-nums">
+        <div class="hnum"><span class="hnum-v g" id="hc1">0</span><span class="hnum-l">Total Expenses</span></div>
+        <div class="hdiv"></div>
+        <div class="hnum"><span class="hnum-v" id="hc2">₹0</span><span class="hnum-l">Total Spent</span></div>
+        <div class="hdiv"></div>
+        <div class="hnum"><span class="hnum-v" id="hc3">₹0</span><span class="hnum-l">This Month</span></div>
+      </div>
+    </div>
+    <div class="hero-scene" id="hero-scene">
+      <div class="card3d" id="card3d">
+        <div class="chip"></div>
+        <div class="card-brand">NEXUS</div>
+        <div class="card-num">•••• •••• •••• 4291</div>
+        <div class="card-foot">
+          <div><div class="card-lbl">Balance</div><div class="card-bal" id="card-balance">₹0</div></div>
+          <div><div class="card-lbl">Valid Thru</div><div class="card-exp">12/27</div></div>
+        </div>
+      </div>
+      <div class="pill pill1 show" style="animation-delay:1.1s">
+        <div class="pill-ic g">✓</div>
+        <div><div class="pill-t" id="pill-income-label">Income</div><div class="pill-s" id="pill-income-val">Loading…</div></div>
+      </div>
+      <div class="pill pill2 show" style="animation-delay:1.4s">
+        <div class="pill-ic r">↑</div>
+        <div><div class="pill-t">Last Expense</div><div class="pill-s" id="pill-last-exp">No expenses yet</div></div>
+      </div>
+      <div class="pill pill3 show" style="animation-delay:1.7s">
+        <div class="pill-ic c">🤖</div>
+        <div><div class="pill-t">AI Insight</div><div class="pill-s" id="pill-insight">Analyzing…</div></div>
+      </div>
+      <div class="pill pill4 show" style="animation-delay:2s">
+        <div class="pill-ic a">🎯</div>
+        <div><div class="pill-t" id="pill-score-label">AI Score</div><div class="pill-s" id="pill-score">Calculating…</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="scroll-hint"><div class="scroll-line"></div><span>Scroll to explore</span></div>
+</section>
+
+<!-- ======== DASHBOARD ======== -->
+<section class="sec dash" id="dashboard">
+  <div class="sec-inner">
+    <div class="sec-hd reveal">
+      <div class="sec-badge">Dashboard</div>
+      <h2 class="sec-title">Your Financial <span class="g">Cockpit</span></h2>
+      <p class="sec-sub" id="dash-greeting">Welcome back! Here's your financial overview.</p>
+    </div>
+    <!-- Alerts -->
+    <div id="alerts-container"></div>
+    <!-- KPIs -->
+    <div class="kpi-grid reveal">
+      <div class="kpi k1"><div class="kpi-shine"></div><span class="kpi-icon">💰</span><div class="kpi-lbl">Net Balance</div><div class="kpi-val" id="kv1">₹0</div><div class="kpi-ch up" id="kv1-ch">Loading…</div><div class="kpi-spark"><canvas id="sp1" width="130" height="36"></canvas></div></div>
+      <div class="kpi k2"><div class="kpi-shine"></div><span class="kpi-icon">📉</span><div class="kpi-lbl">Total Spent</div><div class="kpi-val" id="kv2">₹0</div><div class="kpi-ch" id="kv2-ch">This month</div><div class="kpi-spark"><canvas id="sp2" width="130" height="36"></canvas></div></div>
+      <div class="kpi k3"><div class="kpi-shine"></div><span class="kpi-icon">🎯</span><div class="kpi-lbl">Savings</div><div class="kpi-val" id="kv3">₹0</div><div class="kpi-ch up" id="kv3-ch">vs income</div><div class="kpi-spark"><canvas id="sp3" width="130" height="36"></canvas></div></div>
+      <div class="kpi k4"><div class="kpi-shine"></div><span class="kpi-icon">🤖</span><div class="kpi-lbl">AI Score</div><div class="kpi-val text-cyan" id="kv4">—</div><div class="kpi-ch up" id="kv4-ch">Financial health</div>
+        <div style="margin-top:.6rem"><svg viewBox="0 0 130 8" width="130" height="8"><rect width="130" height="8" rx="4" fill="rgba(255,255,255,0.05)"/><rect id="score-bar" width="0" height="8" rx="4" fill="url(#sg)"/><defs><linearGradient id="sg" x1="0" x2="1"><stop stop-color="#00f5ff"/><stop offset="1" stop-color="#7c3aed"/></linearGradient></defs></svg></div>
+      </div>
+    </div>
+    <!-- Mid -->
+    <div class="mid-grid">
+      <div class="gc reveal delay1">
+        <div class="ch-hd"><h3>Budget Status</h3><span class="badge" id="budget-month">May 2025</span></div>
+        <div class="ch-inner" id="budget-items"></div>
+      </div>
+      <div class="gc reveal delay2">
+        <div class="ch-hd"><h3>Recent Transactions</h3><button class="btxt" onclick="goto('add')">+ Add New</button></div>
+        <div class="filter-bar">
+          <div class="search-wrap"><span class="search-ico">🔍</span><input type="text" id="tx-search" class="search-in" placeholder="Search transactions…"/></div>
+          <select id="tx-filter-cat" class="filter-sel"><option value="">All Categories</option><option value="food">Food</option><option value="transport">Transport</option><option value="shopping">Shopping</option><option value="utilities">Utilities</option><option value="entertainment">Entertainment</option><option value="health">Health</option><option value="education">Education</option><option value="other">Other</option></select>
+          <select id="tx-sort" class="filter-sel"><option value="date-desc">Latest First</option><option value="date-asc">Oldest First</option><option value="amount-desc">Highest Amount</option><option value="amount-asc">Lowest Amount</option></select>
+        </div>
+        <div class="tx-list" id="tx-list"></div>
+      </div>
+    </div>
+    <!-- Savings -->
+    <div class="reveal">
+      <div class="ch-hd"><h3 style="font-family:var(--fh);font-size:1rem;font-weight:600">Savings Goals</h3></div>
+      <div class="sv-grid" id="sv-grid"></div>
+    </div>
+    <!-- Budget Manager -->
+    <div class="reveal budget-mgmt">
+      <div class="ch-hd" style="margin-top:2rem"><h3 style="font-family:var(--fh);font-size:1rem;font-weight:600">Manage Budgets</h3></div>
+      <div class="gc">
+        <div class="budget-form-row">
+          <div class="form-group"><label class="form-lbl">Category</label>
+            <select id="budget-cat" class="filter-sel" style="width:100%"><option value="food">Food & Dining</option><option value="transport">Transport</option><option value="shopping">Shopping</option><option value="utilities">Utilities</option><option value="entertainment">Entertainment</option><option value="health">Health</option><option value="education">Education</option><option value="other">Other</option></select>
+          </div>
+          <div class="form-group"><label class="form-lbl">Monthly Budget (₹)</label><input type="number" id="budget-amount" class="fin" placeholder="10000"/></div>
+          <button class="btn-sm" onclick="saveBudget()">Set Budget</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======== CATEGORIES ======== -->
+<section class="sec cats-sec" id="categories">
+  <div class="sec-inner">
+    <div class="sec-hd reveal">
+      <div class="sec-badge">Categories</div>
+      <h2 class="sec-title">Spending <span class="g">Universe</span></h2>
+      <p class="sec-sub">Tap any category to explore spending</p>
+    </div>
+    <div class="cats-grid reveal" id="cats-grid"></div>
+  </div>
+</section>
+
+<!-- ======== ANALYTICS ======== -->
+<section class="sec analytics" id="analytics">
+  <div class="sec-inner">
+    <div class="sec-hd reveal">
+      <div class="sec-badge">Analytics</div>
+      <h2 class="sec-title">Deep <span class="g">Insights</span></h2>
+      <p class="sec-sub">Visualize patterns. Predict outcomes.</p>
+    </div>
+    <div class="a-grid reveal">
+      <div class="gc a-main">
+        <div class="ch-hd"><h3>Monthly Spending</h3><div class="ctabs"><button class="ctab active" data-p="monthly">Monthly</button><button class="ctab" data-p="weekly">Weekly</button></div></div>
+        <canvas id="mainChart" height="240"></canvas>
+      </div>
+      <div class="gc a-donut">
+        <div class="ch-hd"><h3>By Category</h3></div>
+        <canvas id="donutChart" height="210"></canvas>
+        <div class="dlegend" id="dlegend"></div>
+      </div>
+      <div class="gc a-bar">
+        <div class="ch-hd"><h3>Daily Spend (This Week)</h3></div>
+        <canvas id="barChart" height="190"></canvas>
+      </div>
+      <div class="gc ins-c a-ins1"><div class="ins-ic">📊</div><div><div class="ins-ttl">Spending Trend</div><div class="ins-txt" id="ai-ins1">Analyzing your data…</div></div></div>
+      <div class="gc ins-c a-ins2"><div class="ins-ic">⚡</div><div><div class="ins-ttl">Top Category</div><div class="ins-txt" id="ai-ins2">Analyzing…</div></div></div>
+      <div class="gc ins-c a-ins3"><div class="ins-ic">🎯</div><div><div class="ins-ttl">Budget Alert</div><div class="ins-txt" id="ai-ins3">Analyzing…</div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ======== ADD EXPENSE ======== -->
+<section class="sec ae-sec" id="add">
+  <div class="sec-inner">
+    <div class="sec-hd reveal">
+      <div class="sec-badge">Add Expense</div>
+      <h2 class="sec-title">Log a <span class="g">Transaction</span></h2>
+    </div>
+    <div class="ae-grid reveal">
+      <div class="gc">
+        <div style="display:flex;flex-direction:column;gap:1.2rem">
+          <div class="form-group"><label class="form-lbl">Amount</label>
+            <div class="amtwrap"><span class="amtsym" id="currency-sym">₹</span><input type="number" id="ea" class="fin amt-in" placeholder="0.00"/></div>
+          </div>
+          <div class="frow">
+            <div class="form-group"><label class="form-lbl">Category</label>
+              <div class="csel" id="csel">
+                <div class="csel-disp" id="csel-disp"><span id="csel-val">Select Category</span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div>
+                <div class="csel-drop" id="csel-drop">
+                  <div class="csel-opt" data-v="food">🍔 Food & Dining</div>
+                  <div class="csel-opt" data-v="transport">🚗 Transport</div>
+                  <div class="csel-opt" data-v="shopping">🛍️ Shopping</div>
+                  <div class="csel-opt" data-v="utilities">⚡ Utilities</div>
+                  <div class="csel-opt" data-v="entertainment">🎭 Entertainment</div>
+                  <div class="csel-opt" data-v="health">💊 Health</div>
+                  <div class="csel-opt" data-v="education">📚 Education</div>
+                  <div class="csel-opt" data-v="other">📦 Other</div>
+                </div>
+              </div>
+            </div>
+            <div class="form-group"><label class="form-lbl">Date</label><input type="date" id="ed" class="fin"/></div>
+          </div>
+          <div class="form-group"><label class="form-lbl">Description</label><input type="text" id="edesc" class="fin" placeholder="What did you spend on?"/></div>
+          <div class="form-group"><label class="form-lbl">Notes (optional)</label><input type="text" id="enotes" class="fin" placeholder="Any extra info…"/></div>
+          <div class="form-group"><label class="form-lbl">Payment Method</label>
+            <div class="pay-row">
+              <label class="pay-lbl"><input type="radio" name="pm" value="upi" checked/><span>UPI</span></label>
+              <label class="pay-lbl"><input type="radio" name="pm" value="card"/><span>Card</span></label>
+              <label class="pay-lbl"><input type="radio" name="pm" value="cash"/><span>Cash</span></label>
+              <label class="pay-lbl"><input type="radio" name="pm" value="netbanking"/><span>Net Banking</span></label>
+            </div>
+          </div>
+          <button class="btn-sub" id="submit-btn"><span id="sub-txt">Add Expense</span><div class="spin" id="sub-spin"></div></button>
+        </div>
+      </div>
+      <div class="ae-side">
+        <div class="gc pv-c">
+          <div class="pv-hd">Transaction Preview</div>
+          <div class="pv-amt" id="pv-amt">— —</div>
+          <div class="pv-row" id="pv-cat">Category: —</div>
+          <div class="pv-row" id="pv-desc">Description: —</div>
+          <div class="pv-row" id="pv-date">Date: —</div>
+        </div>
+        <div class="gc">
+          <span class="chal-badge">🏆 Daily Challenge</span>
+          <div class="chal-ttl">No-Spend Friday</div>
+          <div class="chal-desc">Complete today with zero discretionary spending</div>
+          <div class="chal-prog"><div class="chal-fill"></div></div>
+          <div class="chal-sub">73% of users completed today</div>
+          <button class="btn-chal" id="chal-btn">Accept Challenge</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======== AI SECTION ======== -->
+<section class="sec ai-sec" id="ai">
+  <div class="sec-inner">
+    <div class="sec-hd reveal">
+      <div class="sec-badge">AI Assistant</div>
+      <h2 class="sec-title">Your Smart <span class="g">Financial Advisor</span></h2>
+      <p class="sec-sub">Powered by your real financial data</p>
+    </div>
+    <div class="ai-grid reveal">
+      <div class="gc ai-chat">
+        <div class="ai-top">
+          <div class="ai-av"><div class="ai-av-inner">AI</div><div class="ai-ring"></div></div>
+          <div><div class="ai-nm">ASOS AI</div><div class="ai-st"><span class="ai-dot"></span>Online · Analyzing your finances</div></div>
+        </div>
+        <div class="msgs" id="msgs">
+          <div class="msg bot"><div class="bubble" id="ai-welcome">👋 Hello! Sign in to get personalized insights based on your real spending data.</div><div class="msg-tm">just now</div></div>
+        </div>
+        <div class="ai-in-row">
+          <input type="text" id="ai-in" class="ai-inp" placeholder="Ask me anything about your finances…"/>
+          <button class="ai-send" id="ai-send"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
+        </div>
+      </div>
+      <div class="ai-ins" id="ai-insights-panel">
+        <div class="gc ins-card"><div class="ins-ico">💡</div><div class="ins-bd"><div class="ins-t">Smart Saving Tip</div><div class="ins-tx" id="ins-tip">Loading your personalized tip…</div></div><button class="btn-ins" onclick="goto('ai')">Apply</button></div>
+        <div class="gc ins-card"><div class="ins-ico">🔮</div><div class="ins-bd"><div class="ins-t">Spending Prediction</div><div class="ins-tx" id="ins-predict">Calculating prediction…</div></div><button class="btn-ins" onclick="goto('add')">Plan</button></div>
+        <div class="gc ins-card"><div class="ins-ico">⚡</div><div class="ins-bd"><div class="ins-t">Quick Win</div><div class="ins-tx" id="ins-quick">Finding opportunities…</div></div><button class="btn-ins" onclick="goto('dashboard')">Review</button></div>
+        <div class="gc ins-card"><div class="ins-ico">📈</div><div class="ins-bd"><div class="ins-t">Savings Rate</div><div class="ins-tx" id="ins-savings">Calculating your savings rate…</div></div><button class="btn-ins" onclick="goto('dashboard')">View</button></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="ft-inner">
+    <div>
+      <div class="logo"><div class="logo-box"><span class="logo-hex">◈</span></div><span class="logo-name">E-TRACK</span></div>
+      <p class="ft-sub">AI-powered financial intelligence for the modern era.</p>
+    </div>
+    <div class="ft-copy">© 2026 E-TRACK — Built for smart spenders.</div>
+  </div>
+</footer>
+
+<nav class="mob-nav" id="mob-nav">
+  <a href="#hero" class="mn-item active" data-s="hero"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Home</span></a>
+  <a href="#dashboard" class="mn-item" data-s="dashboard"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg><span>Dashboard</span></a>
+  <div class="mn-fab-wrap"><button class="mn-fab" onclick="goto('add')"><svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button></div>
+  <a href="#analytics" class="mn-item" data-s="analytics"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><span>Analytics</span></a>
+  <a href="#ai" class="mn-item" data-s="ai"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg><span>AI</span></a>
+</nav>
+
+<div class="toast" id="toast"><span class="toast-ico">✅</span><span class="toast-txt" id="toast-txt">Done!</span></div>
+<script src="script.js"></script>
+</body>
+</html>
